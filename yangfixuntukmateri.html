@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>d. Contoh Perhitungan — Triple Exponential Smoothing (Holt-Winters)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Source+Sans+3:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#1e1e2e;
+  --ink2:#3a3a4a;
+  --ink3:#6b6b7b;
+  --paper:#faf9f7;
+  --paper2:#f0efe9;
+  --cream:#ece9df;
+  --gold:#b8860b;
+  --gold-light:#e8d48b;
+  --gold-pale:#faf3d6;
+  --teal:#1a6b5a;
+  --teal-light:#d4efe9;
+  --rust:#c0392b;
+  --rust-light:#fdecea;
+  --blue:#2c5f8a;
+  --blue-light:#dce9f3;
+  --shadow:0 2px 24px rgba(30,30,46,.08);
+  --shadow-md:0 6px 32px rgba(30,30,46,.12);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Source Sans 3',sans-serif;background:var(--paper);color:var(--ink);line-height:1.7;font-size:16px}
+
+/* ── HEADER ── */
+.hero{
+  background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  color:#fff;padding:80px 24px 72px;text-align:center;position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hero-label{font-size:.88rem;text-transform:uppercase;letter-spacing:3px;opacity:.6;margin-bottom:14px;position:relative}
+.hero h1{font-family:'Playfair Display',serif;font-size:2.9rem;font-weight:800;position:relative;line-height:1.2;margin-bottom:16px}
+.hero p{font-size:1.05rem;opacity:.78;max-width:680px;margin:0 auto;position:relative}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+  border-radius:24px;padding:6px 16px;font-size:.85rem;margin-top:24px;position:relative;
+}
+.hero-badge span{opacity:.7}
+
+/* ── NAV PILLS ── */
+.nav-pills{
+  position:sticky;top:0;z-index:100;
+  background:rgba(250,249,247,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--cream);
+  padding:0 24px;display:flex;justify-content:center;gap:4px;flex-wrap:wrap;
+}
+.nav-pills a{
+  color:var(--ink3);text-decoration:none;font-size:.82rem;font-weight:500;
+  padding:12px 14px;border-radius:6px;transition:.2s;text-transform:uppercase;letter-spacing:.8px;
+}
+.nav-pills a:hover{background:var(--gold-pale);color:var(--gold)}
+
+/* ── CONTAINER ── */
+.wrap{max-width:960px;margin:0 auto;padding:56px 24px}
+
+/* ── SECTION HEADING ── */
+.sec-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:50%;
+  background:var(--ink);color:#fff;font-family:'Playfair Display',serif;
+  font-size:1rem;font-weight:700;margin-bottom:12px;
+}
+.sec-num.gold{background:var(--gold)}
+.sec-num.teal{background:var(--teal)}
+.sec-num.rust{background:var(--rust)}
+.sec-num.blue{background:var(--blue)}
+h2.sec-title{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;color:var(--ink);margin-bottom:8px}
+.sec-desc{color:var(--ink3);font-size:.97rem;margin-bottom:28px;max-width:720px}
+
+/* ── CARD ── */
+.card{background:#fff;border-radius:12px;padding:32px;box-shadow:var(--shadow);margin-bottom:28px;border:1px solid rgba(30,30,46,.06)}
+
+/* ── PARAM BOX ── */
+.param-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0}
+.param-card{
+  border:2px solid var(--cream);border-radius:10px;padding:20px;text-align:center;
+  background:var(--gold-pale);transition:.25s;
+}
+.param-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:var(--shadow)}
+.param-card .sym{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:var(--gold)}
+.param-card .name{font-size:.82rem;color:var(--ink3);margin:4px 0}
+.param-card .val{font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:500;color:var(--ink)}
+
+/* ── HOW-ALPHA BOX ── */
+.how-box{background:var(--blue-light);border-left:4px solid var(--blue);border-radius:8px;padding:20px 24px;margin:20px 0}
+.how-box h4{color:var(--blue);margin-bottom:8px;font-size:1rem}
+.how-box p,.how-box li{font-size:.94rem;color:var(--ink2)}
+.how-box ul{margin:8px 0 0 18px}
+.how-box li{margin-bottom:4px}
+
+/* ── FORMULA BOX ── */
+.formula{
+  background:linear-gradient(135deg,#f7f6f2,#eeece4);
+  border-left:4px solid var(--gold);border-radius:8px;padding:18px 22px;margin:18px 0;
+  position:relative;overflow:hidden;
+}
+.formula::after{content:'f(x)';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:3.2rem;opacity:.06;font-family:'Playfair Display',serif;pointer-events:none}
+.formula .ftitle{font-size:.78rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);font-weight:600;margin-bottom:6px}
+.formula .eq{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--ink);line-height:1.8}
+
+/* ── CALC STEPS ── */
+.calc{background:#fff;border:2px dashed var(--gold-light);border-radius:10px;padding:20px 24px;margin:16px 0}
+.calc-row{font-family:'JetBrains Mono',monospace;font-size:.93rem;margin:5px 0;color:var(--ink2)}
+.calc-row .lbl{font-family:'Source Sans 3',sans-serif;font-weight:600;color:var(--teal);font-size:.92rem}
+.calc-row .ans{color:var(--teal);font-weight:700}
+.calc-row .sub{color:var(--ink3);font-size:.85rem}
+
+/* ── RESULT PILL ── */
+.result-row{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+.result-pill{
+  flex:1;min-width:140px;text-align:center;
+  background:linear-gradient(135deg,var(--teal),#1a8a6f);
+  color:#fff;border-radius:10px;padding:16px 12px;
+}
+.result-pill .rlabel{font-size:.78rem;opacity:.85;text-transform:uppercase;letter-spacing:.8px}
+.result-pill .rval{font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:500;margin-top:4px}
+
+/* ── NOTE / INFO ── */
+.note{background:var(--gold-pale);border-left:4px solid var(--gold);border-radius:8px;padding:16px 20px;margin:16px 0;font-size:.93rem}
+.note strong{color:var(--gold)}
+.note-info{background:var(--blue-light);border-left:4px solid var(--blue);border-radius:8px;padding:16px 20px;margin:16px 0;font-size:.93rem}
+.note-info strong{color:var(--blue)}
+.note-warn{background:var(--rust-light);border-left:4px solid var(--rust);border-radius:8px;padding:16px 20px;margin:16px 0;font-size:.93rem}
+.note-warn strong{color:var(--rust)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;margin:18px 0}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+thead th{
+  background:var(--ink);color:#fff;padding:12px 10px;
+  font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.6px;
+  text-align:center;white-space:nowrap;
+}
+tbody td{padding:10px;text-align:center;border-bottom:1px solid var(--cream);font-family:'JetBrains Mono',monospace;font-size:.87rem}
+tbody tr:hover{background:var(--gold-pale)}
+tbody tr.init{background:#eef5e6}
+tbody tr.init td{font-weight:600}
+tbody tr.test{background:var(--blue-light)}
+tbody tr.test td{font-weight:600}
+tbody tr.empty{background:#fef3f3}
+tbody tr.empty td{color:var(--rust);font-style:italic}
+tbody td.name{font-family:'Source Sans 3',sans-serif;text-align:left;font-weight:500;color:var(--ink)}
+tbody td.badge{font-family:'Source Sans 3',sans-serif;font-size:.76rem;font-weight:600;padding:3px 8px;border-radius:4px;display:inline-block}
+.badge-init{background:#eef5e6;color:var(--teal)}
+.badge-train{background:var(--blue-light);color:var(--blue)}
+.badge-test{background:#fff0d4;color:#b8860b}
+.badge-empty{background:#fef3f3;color:var(--rust)}
+
+/* ── DIVIDER ── */
+.divider{border:none;border-top:2px solid var(--cream);margin:48px 0}
+
+/* ── QUOTE / PROSE ── */
+.prose{color:var(--ink2);font-size:.97rem;line-height:1.85;margin-bottom:20px}
+blockquote{
+  border-left:4px solid var(--ink);background:var(--paper2);
+  padding:18px 24px;border-radius:0 8px 8px 0;margin:20px 0;font-style:italic;color:var(--ink2);
+}
+
+/* ── MAPE BANNER ── */
+.mape-banner{
+  background:linear-gradient(135deg,#1a1a2e,#16213e);
+  color:#fff;border-radius:14px;padding:36px;text-align:center;margin:28px 0;
+}
+.mape-banner .mlabel{font-size:.82rem;text-transform:uppercase;letter-spacing:2px;opacity:.6;margin-bottom:6px}
+.mape-banner .mval{font-family:'Playfair Display',serif;font-size:3rem;font-weight:800}
+.mape-banner .mdesc{font-size:.92rem;opacity:.7;margin-top:8px;max-width:540px;margin-left:auto;margin-right:auto}
+
+/* ── FORECAST NEXT ── */
+.forecast-next{
+  background:linear-gradient(135deg,var(--teal),#1a8a6f);
+  color:#fff;border-radius:14px;padding:36px;margin:28px 0;
+}
+.forecast-next h3{font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:12px}
+.forecast-next .frow{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0}
+.forecast-next .fpill{flex:1;min-width:120px;background:rgba(255,255,255,.12);border-radius:10px;padding:14px;text-align:center}
+.forecast-next .fpill .fl{font-size:.75rem;opacity:.75;text-transform:uppercase;letter-spacing:.8px}
+.forecast-next .fpill .fv{font-family:'JetBrains Mono',monospace;font-size:1.15rem;margin-top:4px}
+.forecast-next .feq{font-family:'JetBrains Mono',monospace;font-size:.95rem;background:rgba(255,255,255,.1);border-radius:8px;padding:14px 18px;margin:14px 0;line-height:1.7}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:48px 24px;color:var(--ink3);font-size:.87rem;border-top:1px solid var(--cream);margin-top:20px}
+footer strong{color:var(--ink)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .hero h1{font-size:2rem}
+  .param-grid{grid-template-columns:1fr}
+  .result-row{flex-direction:column}
+  .wrap{padding:40px 16px}
+  .card{padding:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════ HERO ════════════ -->
+<div class="hero">
+  <div class="hero-label">Laporan Teknis — Forecasting</div>
+  <h1>d. Contoh Perhitungan<br>Triple Exponential Smoothing</h1>
+  <p>Perhitungan lengkap metode Holt-Winters Additive pada jenis kegiatan <strong>Perbaikan Meteran</strong> — dari inisialisasi hingga prediksi periode berikutnya.</p>
+  <div class="hero-badge"><span>📂</span> Kelompok 1 &nbsp;|&nbsp; <span>📅</span> Januari – Desember 2025</div>
+</div>
+
+<!-- ════════════ NAV ════════════ -->
+<nav class="nav-pills">
+  <a href="#data-masukan">Data Masukan</a>
+  <a href="#param">Parameter</a>
+  <a href="#konversi">Konversi</a>
+  <a href="#inisialisasi">Inisialisasi</a>
+  <a href="#testing">Testing</a>
+  <a href="#tabel-lengkap">Hasil Lengkap</a>
+  <a href="#evaluasi">Evaluasi</a>
+  <a href="#prediksi">Prediksi</a>
+</nav>
+
+<!-- ════════════ WRAP ════════════ -->
+<div class="wrap">
+
+<!-- ─── INTRO ─── -->
+<p class="prose" style="margin-top:8px">
+  Berikut merupakan contoh perhitungan metode Triple Exponential Smoothing (Holt-Winters Additive) pada jenis kegiatan <strong>Perbaikan Meteran</strong> untuk Kelompok 1. Untuk menjamin akurasi model, data dibagi menjadi dua bagian: <strong>80% Data Training</strong> (65 data) untuk melatih model dan <strong>20% Data Testing</strong> (16 data) untuk menguji keakurasi prediksi model.
+</p>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 0 — DATA MASUKAN
+════════════════════════════════════════ -->
+<div id="data-masukan"></div>
+<div class="sec-num" style="background:var(--ink)">0</div>
+<h2 class="sec-title">4.3.1 Data Masukan — Laporan Harian PLN Galesong</h2>
+<p class="sec-desc">Tahap awal adalah menyiapkan data mentah. Sesuai arahan, kita menggunakan <strong>80% data sebagai Training Set</strong> untuk membentuk pola forecasting awal.</p>
+
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:14px">📋 Sumber Data</h3>
+  <p class="prose">Pada tabel data set <strong>Laporan Harian PLN Galesong</strong>, terdapat berbagai jenis kegiatan di antaranya:</p>
+  <ul style="margin:12px 0 12px 24px;line-height:1.9">
+    <li><strong>Perbaikan Meteran</strong></li>
+    <li>Perbaikan Sambung Rumah</li>
+    <li>Pemeriksaan Gardu</li>
+    <li>Jenis Kegiatan Lainnya</li>
+  </ul>
+  <p class="prose">Pada contoh ini, kita mengambil data pada jenis kegiatan <strong>"Perbaikan Meteran"</strong> sebagai fokus analisis forecasting.</p>
+</div>
+
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:14px">🔧 Proses Pengolahan Data</h3>
+  <p class="prose">Tabel di bawah ini adalah <strong>hasil rekap</strong> untuk memulai perhitungan menggunakan Triple Exponential Smoothing. Kolom <strong>Hari, Jenis Kegiatan, Tanggal, Waktu Mulai, dan Waktu Selesai</strong> diambil langsung dari dataset asli. Namun, untuk keperluan analisis, kita perlu menambahkan kolom:</p>
+  
+  <div class="note" style="margin:18px 0">
+    <strong>📌 Kolom Tambahan yang Dihitung:</strong><br>
+    <strong>1. Durasi (H:MM:SS)</strong> — dihitung dari selisih Waktu Selesai − Waktu Mulai<br>
+    <strong>2. Durasi (Jam)</strong> — konversi dari H:MM:SS ke format jam desimal<br>
+    <strong>3. Bulan</strong> — pengelompokan data berdasarkan bulan dari Tanggal
+  </div>
+
+  <h4 style="font-family:'Playfair Display',serif;margin-top:28px;margin-bottom:12px">Rumus 1 — Menghitung Durasi (H:MM:SS)</h4>
+  <div class="formula">
+    <div class="ftitle">Rumus di Excel / Spreadsheet</div>
+    <div class="eq">Durasi (H:MM:SS) = Waktu Selesai − Waktu Mulai</div>
+    <div class="eq" style="font-size:.85rem;opacity:.6;">// Format hasil: H:MM:SS (misal: 0:28:10)</div>
+  </div>
+  <p class="prose"><strong>Contoh:</strong> Baris 2 → Waktu Mulai = 14:44:23, Waktu Selesai = 15:12:33</p>
+  <div class="calc">
+    <div class="calc-row">Durasi = 15:12:33 − 14:44:23</div>
+    <div class="calc-row">Durasi = <span class="ans">0:28:10</span> (0 jam, 28 menit, 10 detik)</div>
+  </div>
+
+  <h4 style="font-family:'Playfair Display',serif;margin-top:28px;margin-bottom:12px">Rumus 2 — Konversi Durasi ke Jam Desimal</h4>
+  <div class="formula">
+    <div class="ftitle">Rumus Konversi</div>
+    <div class="eq">Durasi (Jam) = Jam + (Menit ÷ 60) + (Detik ÷ 3600)</div>
+  </div>
+  <p class="prose"><strong>Contoh:</strong> Durasi 0:28:10 dikonversi ke jam</p>
+    <div class="calc-row">= <span class="ans">0.4694 jam</span></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai 0.4694 jam ini menunjukkan bahwa pekerjaan perbaikan meteran tersebut diselesaikan dalam waktu hampir setengah jam, tepatnya 28 menit 10 detik setelah dikonversi ke format desimal untuk perhitungan matematis.</p>
+</div>
+
+<!-- Tabel Data Lengkap 81 baris -->
+<div class="card" style="padding:20px">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:18px;text-align:center">📊 Tabel Lengkap Data Perbaikan Meteran (81 Data)</h3>
+  <p style="text-align:center;color:var(--ink3);font-size:.92rem;margin-bottom:20px">Periode: Januari – Desember 2025</p>
+  
+  <div class="tbl-wrap">
+    <table style="font-size:.8rem">
+      <thead>
+        <tr>
+          <th>No</th><th>Status</th><th>Hari</th><th>Jenis Kegiatan</th><th>Tanggal</th>
+          <th>Waktu Mulai</th><th>Waktu Selesai</th><th>Durasi<br>(H:MM:SS)</th>
+          <th>Durasi<br>(Jam)</th><th>Bulan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 80% DATA TRAINING (No 1-65) -->
+        <tr><td>1</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>1/1/2025</td><td>8:19:22</td><td>8:25:39</td><td>0:06:17</td><td>0.104722</td><td>Bulan 1</td></tr>
+        <tr><td>2</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>1/1/2025</td><td>14:44:23</td><td>15:12:33</td><td>0:28:10</td><td>0.469444</td><td>Bulan 1</td></tr>
+        <tr><td>3</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>1/10/2025</td><td>10:24:52</td><td>10:55:26</td><td>0:30:34</td><td>0.509444</td><td>Bulan 1</td></tr>
+        <tr><td>4</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>1/17/2025</td><td>8:43:53</td><td>8:52:18</td><td>0:08:25</td><td>0.140278</td><td>Bulan 1</td></tr>
+        <tr><td>5</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>1/20/2025</td><td>11:22:34</td><td>11:45:51</td><td>0:23:17</td><td>0.388056</td><td>Bulan 1</td></tr>
+        <tr><td>6</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>2/4/2025</td><td>17:40:13</td><td>17:51:55</td><td>0:11:42</td><td>0.195000</td><td>Bulan 2</td></tr>
+        <tr><td>7</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>2/7/2025</td><td>16:56:38</td><td>17:33:01</td><td>0:36:23</td><td>0.606389</td><td>Bulan 2</td></tr>
+        <tr><td>8</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>2/10/2025</td><td>8:34:23</td><td>8:56:29</td><td>0:22:06</td><td>0.368333</td><td>Bulan 2</td></tr>
+        <tr><td>9</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>2/10/2025</td><td>9:22:38</td><td>9:53:28</td><td>0:30:50</td><td>0.513889</td><td>Bulan 2</td></tr>
+        <tr><td>10</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>2/13/2025</td><td>8:35:20</td><td>8:46:44</td><td>0:11:24</td><td>0.190000</td><td>Bulan 2</td></tr>
+        <tr><td>11</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>2/13/2025</td><td>9:12:29</td><td>9:43:33</td><td>0:31:04</td><td>0.517778</td><td>Bulan 2</td></tr>
+        <tr><td>12</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/16/2025</td><td>8:26:10</td><td>8:45:19</td><td>0:19:09</td><td>0.319167</td><td>Bulan 2</td></tr>
+        <tr><td>13</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/23/2025</td><td>16:08:50</td><td>16:31:11</td><td>0:22:21</td><td>0.372500</td><td>Bulan 2</td></tr>
+        <tr><td>14</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>2/23/2025</td><td>18:04:03</td><td>18:13:13</td><td>0:09:10</td><td>0.152778</td><td>Bulan 2</td></tr>
+        <tr><td>15</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>3/1/2025</td><td>10:03:34</td><td>10:28:32</td><td>0:24:58</td><td>0.416111</td><td>Bulan 3</td></tr>
+        <tr><td>16</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>1:13:33</td><td>1:40:17</td><td>0:26:44</td><td>0.445556</td><td>Bulan 3</td></tr>
+        <tr><td>17</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>12:58:35</td><td>13:15:37</td><td>0:17:02</td><td>0.283889</td><td>Bulan 3</td></tr>
+        <tr><td>18</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>3/4/2025</td><td>19:41:06</td><td>20:05:07</td><td>0:24:01</td><td>0.400278</td><td>Bulan 3</td></tr>
+        <tr><td>19</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>3/7/2025</td><td>21:21:55</td><td>22:18:21</td><td>0:56:26</td><td>0.940556</td><td>Bulan 3</td></tr>
+        <tr><td>20</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/10/2025</td><td>14:06:42</td><td>14:31:31</td><td>0:24:49</td><td>0.413611</td><td>Bulan 3</td></tr>
+        <tr><td>21</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>3/13/2025</td><td>10:50:32</td><td>11:06:50</td><td>0:16:18</td><td>0.271667</td><td>Bulan 3</td></tr>
+        <tr><td>22</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>1:09:53</td><td>1:18:38</td><td>0:08:45</td><td>0.145833</td><td>Bulan 3</td></tr>
+        <tr><td>23</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>10:47:47</td><td>11:07:08</td><td>0:19:21</td><td>0.322500</td><td>Bulan 3</td></tr>
+        <tr><td>24</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>15:57:31</td><td>16:26:04</td><td>0:28:33</td><td>0.475833</td><td>Bulan 3</td></tr>
+        <tr><td>25</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>3/17/2025</td><td>20:48:17</td><td>21:00:50</td><td>0:12:33</td><td>0.209167</td><td>Bulan 3</td></tr>
+        <tr><td>26</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>3/20/2025</td><td>20:32:11</td><td>21:07:46</td><td>0:35:35</td><td>0.593056</td><td>Bulan 3</td></tr>
+        <tr><td>27</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>3/23/2025</td><td>19:56:05</td><td>20:18:58</td><td>0:22:53</td><td>0.381389</td><td>Bulan 3</td></tr>
+        <tr><td>28</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>3/29/2025</td><td>13:55:07</td><td>14:19:04</td><td>0:23:57</td><td>0.399167</td><td>Bulan 3</td></tr>
+        <tr><td>29</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>4/1/2025</td><td>10:12:51</td><td>10:29:13</td><td>0:16:22</td><td>0.272778</td><td>Bulan 4</td></tr>
+        <tr><td>30</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>4/4/2025</td><td>10:23:47</td><td>10:44:58</td><td>0:21:11</td><td>0.353056</td><td>Bulan 4</td></tr>
+        <tr><td>31</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>4/7/2025</td><td>8:23:33</td><td>8:55:19</td><td>0:31:46</td><td>0.529444</td><td>Bulan 4</td></tr>
+        <tr><td>32</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>4/7/2025</td><td>14:33:10</td><td>14:50:18</td><td>0:17:08</td><td>0.285556</td><td>Bulan 4</td></tr>
+        <tr><td>33</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>4/10/2025</td><td>15:24:18</td><td>15:54:06</td><td>0:29:48</td><td>0.496667</td><td>Bulan 4</td></tr>
+        <tr><td>34</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>4/13/2025</td><td>9:08:07</td><td>9:20:34</td><td>0:12:27</td><td>0.207500</td><td>Bulan 4</td></tr>
+        <tr><td>35</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>4/17/2025</td><td>11:18:05</td><td>11:26:13</td><td>0:08:08</td><td>0.135556</td><td>Bulan 4</td></tr>
+        <tr><td>36</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>4/29/2025</td><td>15:39:37</td><td>15:46:55</td><td>0:07:18</td><td>0.121667</td><td>Bulan 4</td></tr>
+        <tr><td>37</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>10:01:43</td><td>10:17:36</td><td>0:15:53</td><td>0.264722</td><td>Bulan 5</td></tr>
+        <tr><td>38</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>8:58:51</td><td>9:18:09</td><td>0:19:18</td><td>0.321667</td><td>Bulan 5</td></tr>
+        <tr><td>39</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/2/2025</td><td>18:14:51</td><td>18:30:34</td><td>0:15:43</td><td>0.261944</td><td>Bulan 5</td></tr>
+        <tr><td>40</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>5/5/2025</td><td>8:33:29</td><td>8:49:11</td><td>0:15:42</td><td>0.261667</td><td>Bulan 5</td></tr>
+        <tr><td>41</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>5/8/2025</td><td>18:19:08</td><td>18:39:43</td><td>0:20:35</td><td>0.343056</td><td>Bulan 5</td></tr>
+        <tr><td>42</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/23/2025</td><td>9:56:33</td><td>10:15:19</td><td>0:18:46</td><td>0.312778</td><td>Bulan 5</td></tr>
+        <tr><td>43</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>5/23/2025</td><td>14:50:04</td><td>14:58:48</td><td>0:08:44</td><td>0.145556</td><td>Bulan 5</td></tr>
+        <tr><td>44</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>6/2/2025</td><td>9:33:19</td><td>10:13:18</td><td>0:39:59</td><td>0.666389</td><td>Bulan 6</td></tr>
+        <tr><td>45</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>6/8/2025</td><td>13:38:24</td><td>14:01:08</td><td>0:22:44</td><td>0.378889</td><td>Bulan 6</td></tr>
+        <tr><td>46</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>6/20/2025</td><td>9:23:47</td><td>9:43:54</td><td>0:20:07</td><td>0.335278</td><td>Bulan 6</td></tr>
+        <tr><td>47</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>6/20/2025</td><td>16:38:06</td><td>16:51:51</td><td>0:13:45</td><td>0.229167</td><td>Bulan 6</td></tr>
+        <tr><td>48</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>6/25/2025</td><td>14:32:05</td><td>14:54:32</td><td>0:22:27</td><td>0.374167</td><td>Bulan 6</td></tr>
+        <tr class="empty"><td>—</td><td><span class="badge badge-empty">Kosong</span></td><td colspan="8" style="text-align:center;color:var(--rust);font-weight:600">— Bulan 7 (Juli): Tidak ada data perbaikan meteran —</td></tr>
+        <tr><td>49</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>11:52:26</td><td>12:29:29</td><td>0:37:03</td><td>0.617500</td><td>Bulan 8</td></tr>
+        <tr><td>50</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>13:39:43</td><td>14:21:03</td><td>0:41:20</td><td>0.688889</td><td>Bulan 8</td></tr>
+        <tr><td>51</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/9/2025</td><td>17:27:33</td><td>18:06:32</td><td>0:38:59</td><td>0.649722</td><td>Bulan 8</td></tr>
+        <tr><td>52</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>8/12/2025</td><td>9:36:01</td><td>9:55:18</td><td>0:19:17</td><td>0.321389</td><td>Bulan 8</td></tr>
+        <tr><td>53</td><td><span class="badge badge-train">Training</span></td><td>Selasa</td><td class="name">Perbaikan Meteran</td><td>8/12/2025</td><td>12:18:41</td><td>12:34:43</td><td>0:16:02</td><td>0.267222</td><td>Bulan 8</td></tr>
+        <tr><td>54</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>8/15/2025</td><td>14:32:17</td><td>14:41:40</td><td>0:09:23</td><td>0.156389</td><td>Bulan 8</td></tr>
+        <tr><td>55</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>8/15/2025</td><td>15:30:52</td><td>15:56:23</td><td>0:25:31</td><td>0.425278</td><td>Bulan 8</td></tr>
+        <tr><td>56</td><td><span class="badge badge-train">Training</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>8/18/2025</td><td>9:12:44</td><td>9:22:29</td><td>0:09:45</td><td>0.162500</td><td>Bulan 8</td></tr>
+        <tr><td>57</td><td><span class="badge badge-train">Training</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>8/21/2025</td><td>10:28:46</td><td>10:41:24</td><td>0:12:38</td><td>0.210556</td><td>Bulan 8</td></tr>
+        <tr><td>58</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>8/27/2025</td><td>16:25:47</td><td>16:50:57</td><td>0:25:10</td><td>0.419444</td><td>Bulan 8</td></tr>
+        <tr><td>59</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>8/30/2025</td><td>7:52:51</td><td>8:00:44</td><td>0:07:53</td><td>0.131389</td><td>Bulan 8</td></tr>
+        <tr><td>60</td><td><span class="badge badge-train">Training</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>9/3/2025</td><td>12:08:38</td><td>12:30:27</td><td>0:21:49</td><td>0.363611</td><td>Bulan 9</td></tr>
+        <tr><td>61</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>9/12/2025</td><td>12:36:39</td><td>12:44:21</td><td>0:07:42</td><td>0.128333</td><td>Bulan 9</td></tr>
+        <tr><td>62</td><td><span class="badge badge-train">Training</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>9/21/2025</td><td>8:24:25</td><td>8:45:32</td><td>0:21:07</td><td>0.351944</td><td>Bulan 9</td></tr>
+        <tr><td>63</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>9/27/2025</td><td>15:09:54</td><td>15:26:50</td><td>0:16:56</td><td>0.282222</td><td>Bulan 9</td></tr>
+        <tr><td>64</td><td><span class="badge badge-train">Training</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>9/27/2025</td><td>16:54:39</td><td>17:16:31</td><td>0:21:52</td><td>0.364444</td><td>Bulan 9</td></tr>
+        <tr><td>65</td><td><span class="badge badge-train">Training</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>10/10/2025</td><td>13:38:57</td><td>13:51:18</td><td>0:12:21</td><td>0.205833</td><td>Bulan 10</td></tr>
+
+        <!-- 20% DATA TESTING (No 66-81) -->
+        <tr><td>66</td><td><span class="badge badge-test">Testing</span></td><td>Senin</td><td class="name">Perbaikan Meteran</td><td>10/13/2025</td><td>10:06:50</td><td>10:43:04</td><td>0:36:14</td><td>0.603889</td><td>Bulan 10</td></tr>
+        <tr><td>67</td><td><span class="badge badge-test">Testing</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>10/16/2025</td><td>9:10:53</td><td>9:26:16</td><td>0:15:23</td><td>0.256389</td><td>Bulan 10</td></tr>
+        <tr><td>68</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>10/19/2025</td><td>9:13:14</td><td>9:25:47</td><td>0:12:33</td><td>0.209167</td><td>Bulan 10</td></tr>
+        <tr><td>69</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>10/19/2025</td><td>15:16:22</td><td>15:54:21</td><td>0:37:59</td><td>0.633056</td><td>Bulan 10</td></tr>
+        <tr><td>70</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>10/22/2025</td><td>9:20:56</td><td>9:34:24</td><td>0:13:28</td><td>0.224444</td><td>Bulan 10</td></tr>
+        <tr><td>71</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>10/22/2025</td><td>9:33:10</td><td>9:55:27</td><td>0:22:17</td><td>0.371389</td><td>Bulan 10</td></tr>
+        <tr><td>72</td><td><span class="badge badge-test">Testing</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>10/25/2025</td><td>12:15:28</td><td>12:36:19</td><td>0:20:51</td><td>0.347500</td><td>Bulan 10</td></tr>
+        <tr><td>73</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>11/12/2025</td><td>7:22:43</td><td>7:54:32</td><td>0:31:49</td><td>0.530278</td><td>Bulan 11</td></tr>
+        <tr><td>74</td><td><span class="badge badge-test">Testing</span></td><td>Rabu</td><td class="name">Perbaikan Meteran</td><td>11/12/2025</td><td>13:03:18</td><td>13:28:11</td><td>0:24:53</td><td>0.414722</td><td>Bulan 11</td></tr>
+        <tr><td>75</td><td><span class="badge badge-test">Testing</span></td><td>Jumat</td><td class="name">Perbaikan Meteran</td><td>12/12/2025</td><td>9:13:36</td><td>9:38:11</td><td>0:24:35</td><td>0.409722</td><td>Bulan 12</td></tr>
+        <tr><td>76</td><td><span class="badge badge-test">Testing</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>12/18/2025</td><td>15:12:47</td><td>15:42:36</td><td>0:29:49</td><td>0.496944</td><td>Bulan 12</td></tr>
+        <tr><td>77</td><td><span class="badge badge-test">Testing</span></td><td>Kamis</td><td class="name">Perbaikan Meteran</td><td>12/18/2025</td><td>17:34:54</td><td>17:54:22</td><td>0:19:28</td><td>0.324444</td><td>Bulan 12</td></tr>
+        <tr><td>78</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>10:36:01</td><td>11:28:52</td><td>0:52:51</td><td>0.880833</td><td>Bulan 12</td></tr>
+        <tr><td>79</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>12:17:32</td><td>12:35:27</td><td>0:17:55</td><td>0.298611</td><td>Bulan 12</td></tr>
+        <tr><td>80</td><td><span class="badge badge-test">Testing</span></td><td>Minggu</td><td class="name">Perbaikan Meteran</td><td>12/21/2025</td><td>13:37:06</td><td>14:26:21</td><td>0:49:15</td><td>0.820833</td><td>Bulan 12</td></tr>
+        <tr><td>81</td><td><span class="badge badge-test">Testing</span></td><td>Sabtu</td><td class="name">Perbaikan Meteran</td><td>12/27/2025</td><td>16:14:07</td><td>16:47:36</td><td>0:33:29</td><td>0.558056</td><td>Bulan 12</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note-info" style="margin-top:20px">
+    <strong>📊 Pembagian Dataset (80% Training & 20% Testing):</strong><br>
+    • Total data keseluruhan: <strong>81 pekerjaan</strong><br>
+    • <strong>Data Training (80%):</strong> No. 1 sampai 65 (digunakan untuk membentuk model)<br>
+    • <strong>Data Testing (20%):</strong> No. 66 sampai 81 (digunakan untuk uji akurasi MAPE)<br>
+    • Periode: <strong>Januari – Desember 2025</strong><br>
+    • Bulan tanpa data: <strong>Juli (Bulan 7)</strong>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 1 — PARAMETER
+════════════════════════════════════════ -->
+<div id="param"></div>
+<hr class="divider">
+<div class="sec-num gold">1</div>
+<h2 class="sec-title">Penentuan Parameter α, β, dan γ</h2>
+<p class="sec-desc">Parameter ini menentukan seberapa besar pengaruh data terbaru terhadap perhitungan level, tren, dan musiman.</p>
+
+<div class="card">
+  <div class="param-grid">
+    <div class="param-card">
+      <div class="sym">α</div>
+      <div class="name">Alpha — Level</div>
+      <div class="val">0.3</div>
+    </div>
+    <div class="param-card">
+      <div class="sym">β</div>
+      <div class="name">Beta — Tren</div>
+      <div class="val">0.7</div>
+    </div>
+    <div class="param-card">
+      <div class="sym">γ</div>
+      <div class="name">Gamma — Musiman</div>
+      <div class="val">0.1</div>
+    </div>
+  </div>
+
+  <div class="how-box">
+    <h4>📌 Bagaimana cara menentukan nilai α = 0.3, β = 0.7, γ = 0.1 ?</h4>
+    <p>Nilai ketiga parameter ditentukan melalui <strong>eksperimentasi dan minimalisasi error</strong>. Prosesnya adalah:</p>
+    <ul>
+      <li><strong>Coba berbagai kombinasi</strong> nilai α, β, γ antara 0 dan 1 (misalnya 0.1, 0.2, 0.3, …, 0.9).</li>
+      <li><strong>Hitung MAPE</strong> untuk setiap kombinasi menggunakan data training (Bulan 1–10).</li>
+      <li><strong>Pilih kombinasi yang menghasilkan MAPE terkecil</strong> — itulah kombinasi terbaik.</li>
+    </ul>
+    <p style="margin-top:10px;"><strong>Kenapa α = 0.3 (kecil)?</strong> — Level berubah pelan-pelan; data perbaikan meteran tidak melompat drastis setiap bulan, jadi bobot data baru cukup rendah.<br>
+    <strong>Kenapa β = 0.7 (besar)?</strong> — Tren berubah lebih cepat; perubahan pola durasi perbaikan cukup dinamis sepanjang tahun.<br>
+    <strong>Kenapa γ = 0.1 (sangat kecil)?</strong> — Pola musiman sangat stabil dan tidak berubah besar dari periode ke periode, sehingga model mempertahankan pola lama lebih kuat.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 2 — KONVERSI DURASI
+════════════════════════════════════════ -->
+<div id="konversi"></div>
+<hr class="divider">
+<div class="sec-num gold">2</div>
+<h2 class="sec-title">Persiapan — Konversi Durasi ke Jam</h2>
+<p class="sec-desc">Data mentah berisi durasi dalam format H:MM:SS. Sebelum digunakan, kita konversi ke satuan <strong>jam desimal</strong>.</p>
+
+<div class="card">
+  <div class="formula">
+    <div class="ftitle">Rumus Konversi</div>
+    <div class="eq">Jam Desimal = Jam + (Menit ÷ 60) + (Detik ÷ 3600)</div>
+  </div>
+
+  <p class="prose"><strong>Contoh:</strong> Durasi <code style="background:var(--cream);padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace">0:28:10</code></p>
+  <div class="calc">
+    <div class="calc-row">= 0 + (28 ÷ 60) + (10 ÷ 3600)</div>
+    <div class="calc-row">= 0 + 0.4667 + 0.00278</div>
+    <div class="calc-row">= <span class="ans">0.4694 jam</span></div>
+  </div>
+
+  <p class="prose" style="margin-top:22px"><strong>Semua data Bulan 1 (Januari 2025):</strong></p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>No</th><th>Tanggal</th><th>Durasi (H:MM:SS)</th><th>Durasi (Jam)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td class="name">1 Jan 2025</td><td>0:06:17</td><td>0.1047</td></tr>
+        <tr><td>2</td><td class="name">1 Jan 2025</td><td>0:28:10</td><td>0.4694</td></tr>
+        <tr><td>3</td><td class="name">10 Jan 2025</td><td>0:30:34</td><td>0.5094</td></tr>
+        <tr><td>4</td><td class="name">17 Jan 2025</td><td>0:08:25</td><td>0.1403</td></tr>
+        <tr><td>5</td><td class="name">20 Jan 2025</td><td>0:23:17</td><td>0.3881</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 3 — INISIALISASI (BULAN 1)
+════════════════════════════════════════ -->
+<div id="inisialisasi"></div>
+<hr class="divider">
+<div class="sec-num teal">3</div>
+<h2 class="sec-title">Inisialisasi — Bulan 1 (Januari)</h2>
+<p class="sec-desc">Bulan 1 adalah titik awal. Di sini kita menentukan nilai awal <strong>Yt, Lt, Tt, St, dan Ft</strong> yang menjadi fondasi seluruh perhitungan berikutnya.</p>
+
+<!-- 3a Yt -->
+<div class="card">
+  <div class="sec-num" style="width:28px;height:28px;font-size:.82rem">3a</div>
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Hitung Data Aktual — Y₁</h3>
+  <p class="prose"><strong>Data Aktual (Yₜ)</strong> adalah <strong>rata-rata durasi pekerjaan</strong> dalam satu bulan.</p>
+  <div class="formula">
+    <div class="ftitle">Rumus</div>
+    <div class="eq">Y₁ = Total Durasi Bulan 1  ÷  Jumlah Pekerjaan Bulan 1</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Langkah 1 — Jumlahkan durasi:</span></div>
+    <div class="calc-row">= 0.1047 + 0.4694 + 0.5094 + 0.1403 + 0.3881</div>
+    <div class="calc-row">= <span class="ans">1.6119 jam</span></div>
+    <br>
+    <div class="calc-row"><span class="lbl">Langkah 2 — Bagi dengan jumlah data (5):</span></div>
+    <div class="calc-row">Y₁ = <span class="ans">0.3224 jam</span></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai 0.3224 jam ini menunjukkan bahwa rata-rata durasi pengerjaan pada bulan pertama adalah sekitar 19 menit 21 detik, yang menjadi titik awal (baseline) untuk perhitungan level pada model forecasting kita.</p>
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">Data Aktual Y₁</div><div class="rval">0.3224</div></div>
+  </div>
+</div>
+
+<!-- 3b Lt -->
+<div class="card">
+  <div class="sec-num" style="width:28px;height:28px;font-size:.82rem">3b</div>
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Hitung Level Awal — L₀</h3>
+  <p class="prose"><strong>Level (Lₜ)</strong> adalah baseline data — nilai "tengah" setelah efek tren dan musiman dipisahkan. Untuk inisialisasi, L₀ dihitung sebagai rata-rata dari bulan-bulan awal yang memiliki data.</p>
+  <div class="formula">
+    <div class="ftitle">Rumus Inisialisasi</div>
+    <div class="eq">L₀ = AVERAGE( Rata-rata Bulan 1 hingga Bulan 6 )</div>
+  </div>
+  <div class="note-info"><strong>Mengapa Bulan 1–6?</strong> Bulan 7 (Juli) tidak ada data perbaikan. Kita menggunakan 6 bulan pertama yang lengkap sebagai basis inisialisasi.</div>
+  <div class="calc">
+    <div class="calc-row">L₀ = (0.3224 + 0.3595 + 0.4070 + 0.3003 + 0.2731 + 0.3968) ÷ 6</div>
+    <div class="calc-row">L₀ = 2.0591 ÷ 6</div>
+    <div class="calc-row">L₀ = <span class="ans">0.3432</span></div>
+  </div>
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">Level Awal L₀</div><div class="rval">0.3432</div></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai level awal 0.3432 menunjukkan rata-rata dasar durasi pekerjaan (baseline) pada awal periode penelitian, yang berfungsi sebagai jangkar utama sebelum dipengaruhi oleh tren dan musiman.</p>
+</div>
+
+<!-- 3c Tt -->
+<div class="card">
+  <div class="sec-num" style="width:28px;height:28px;font-size:.82rem">3c</div>
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Hitung Trend Awal — T₀</h3>
+  <p class="prose"><strong>Trend (Tₜ)</strong> mengukur <strong>arah perubahan</strong> data dari waktu ke waktu.</p>
+  <div class="formula">
+    <div class="ftitle">Rumus Inisialisasi</div>
+    <div class="eq">T₀ = ( Rata-rata Bulan Akhir − Rata-rata Bulan Awal ) ÷ Jumlah Periode</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Rata-rata Bulan 1–4 (awal):</span></div>
+    <div class="calc-row">= (0.3224 + 0.3595 + 0.4070 + 0.3003) ÷ 4 = <span class="ans">0.3473</span></div>
+    <br>
+    <div class="calc-row"><span class="lbl">Rata-rata Bulan 9–12 (akhir):</span></div>
+    <div class="calc-row">= (0.2981 + 0.3565 + 0.4725 + 0.5413) ÷ 4 = <span class="ans">0.4171</span></div>
+    <br>
+    <div class="calc-row"><span class="lbl">Perhitungan Trend:</span></div>
+    <div class="calc-row">T₀ = (0.4171 − 0.3473) ÷ 8</div>
+    <div class="calc-row">T₀ = 0.0698 ÷ 8</div>
+    <div class="calc-row">T₀ = <span class="ans">+0.00872</span></div>
+  </div>
+  <div class="note"><strong>📈 Interpretasi:</strong> Nilai T₀ positif berarti rata-rata durasi perbaikan cenderung <strong>meningkat</strong> sepanjang tahun 2025.</div>
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">Trend Awal T₀</div><div class="rval">+0.00872</div></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai tren positif 0.00872 menunjukkan adanya kecenderungan kenaikan durasi pengerjaan yang lambat namun pasti seiring berjalannya waktu, mungkin karena kompleksitas pekerjaan yang bertambah.</p>
+</div>
+
+<!-- 3d St -->
+<div class="card">
+  <div class="sec-num" style="width:28px;height:28px;font-size:.82rem">3d</div>
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Hitung Seasonal Awal — S₀</h3>
+  <p class="prose"><strong>Seasonal (Sₜ)</strong> menangkap pola musiman — seberapa tinggi atau rendah data di bulan tertentu dibandingkan baseline.</p>
+  <div class="formula">
+    <div class="ftitle">Rumus Inisialisasi</div>
+    <div class="eq">S₀ = Y₁ − ( L₀ + T₀ )</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Langkah 1 — Baseline:</span></div>
+    <div class="calc-row">L₀ + T₀ = 0.3432 + 0.00872 = <span class="ans">0.3519</span></div>
+    <br>
+    <div class="calc-row"><span class="lbl">Langkah 2 — Seasonal:</span></div>
+    <div class="calc-row">S₀ = 0.3224 − 0.3519</div>
+    <div class="calc-row">S₀ = <span class="ans">−0.0295</span></div>
+  </div>
+  <div class="note"><strong>📉 Interpretasi:</strong> S₀ negatif berarti di Januari, durasi perbaikan <strong>lebih rendah</strong> dari baseline rata-rata.</div>
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">Seasonal Awal S₀</div><div class="rval">−0.0295</div></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Nilai negatif -0.0295 menandakan bahwa pada periode Januari, durasi pekerjaan cenderung sedikit lebih cepat dibandingkan rata-rata tahunan, menunjukkan adanya pola penurunan musiman di awal tahun.</p>
+</div>
+
+<!-- 3e Ft -->
+<div class="card">
+  <div class="sec-num" style="width:28px;height:28px;font-size:.82rem">3e</div>
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Hitung Forecast — F₁</h3>
+  <p class="prose"><strong>Forecast (Fₜ)</strong> pada Bulan 1 dihitung dari komponen inisialisasi.</p>
+  <div class="formula">
+    <div class="ftitle">Rumus</div>
+    <div class="eq">F₁ = L₀ + T₀ + S₀</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">F₁ = 0.3432 + 0.00872 + (−0.0295)</div>
+    <div class="calc-row">F₁ = 0.3432 + 0.00872 − 0.0295</div>
+    <div class="calc-row">F₁ = <span class="ans">0.3224</span></div>
+  </div>
+  <div class="note-info"><strong>✅ Catatan:</strong> Pada periode inisialisasi, Forecast sama dengan Data Aktual. Ini normal karena model belum "belajar" dari data sebelumnya.</div>
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">Forecast F₁</div><div class="rval">0.3224</div></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Hasil forecast pertama 0.3224 jam adalah prediksi awal mesin yang menyamakan nilai dengan data aktual pertama, sebagai titik awal pembelajaran algoritma Holt-Winters selanjutnya.</p>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 4 — RUMUS ITERASI
+════════════════════════════════════════ -->
+<hr class="divider">
+<div class="sec-num teal">4</div>
+<h2 class="sec-title">Rumus Iterasi — Bulan 2 hingga 12</h2>
+<p class="sec-desc">Setelah inisialisasi, setiap bulan berikutnya dihitung menggunakan rumus iteratif yang menggunakan <strong>hasil bulan sebelumnya</strong>.</p>
+
+<div class="card">
+  <div class="formula">
+    <div class="ftitle">Level (Lₜ) — baseline terbaru</div>
+    <div class="eq">Lₜ = α × (Yₜ − Sₜ₋₁) + (1 − α) × (Lₜ₋₁ + Tₜ₋₁)</div>
+  </div>
+  <div class="formula">
+    <div class="ftitle">Trend (Tₜ) — kecepatan perubahan</div>
+    <div class="eq">Tₜ = β × (Lₜ − Lₜ₋₁) + (1 − β) × Tₜ₋₁</div>
+  </div>
+  <div class="formula">
+    <div class="ftitle">Seasonal (Sₜ) — pola musiman</div>
+    <div class="eq">Sₜ = γ × (Yₜ − Lₜ) + (1 − γ) × Sₜ₋₁</div>
+  </div>
+  <div class="formula">
+    <div class="ftitle">Forecast (Fₜ) — prediksi</div>
+    <div class="eq">Fₜ = Lₜ₋₁ + Tₜ₋₁ + Sₜ₋₁</div>
+  </div>
+  <div class="note"><strong>💡 Cara baca:</strong> Subscript <strong>t</strong> = bulan sekarang &nbsp;|&nbsp; <strong>t−1</strong> = bulan sebelumnya. Nilai α, β, γ mengontrol bobot antara data baru vs pola lama.</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 5 — TESTING BULAN 11 & 12
+════════════════════════════════════════ -->
+<div id="testing"></div>
+<hr class="divider">
+<div class="sec-num rust">5</div>
+<h2 class="sec-title">Contoh Perhitungan Data Testing (Bulan 11 & 12)</h2>
+<p class="sec-desc">Untuk membuktikan kemampuan model dalam memprediksi data baru, ditampilkan contoh perhitungan pada periode <strong>testing</strong>, yaitu Bulan 11 dan Bulan 12.</p>
+
+<!-- Bulan 11 -->
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;color:var(--rust);margin-bottom:14px">📅 Perhitungan Bulan 11 — November</h3>
+  <p class="prose"><strong>Data dari Bulan 10 (Oktober)</strong> yang akan digunakan:</p>
+  <div class="calc">
+    <div class="calc-row">L₁₀ = <span class="ans">0.3740</span> &nbsp;&nbsp; T₁₀ = <span class="ans">−0.002557</span> &nbsp;&nbsp; S₁₀ = <span class="ans">−0.03328</span></div>
+    <div class="calc-row">Y₁₁ (Data Aktual November) = <span class="ans">0.4725</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">① Forecast F₁₁ (dihitung dulu dari data bulan 10)</div>
+    <div class="eq">F₁₁ = L₁₀ + T₁₀ + S₁₀</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">F₁₁ = 0.3740 + (−0.002557) + (−0.03328)</div>
+    <div class="calc-row">F₁₁ = 0.3740 − 0.002557 − 0.03328</div>
+    <div class="calc-row">F₁₁ = <span class="ans">0.3382</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">② Level L₁₁</div>
+    <div class="eq">L₁₁ = α × (Y₁₁ − S₁₀) + (1 − α) × (L₁₀ + T₁₀)</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">L₁₁ = 0.3 × (0.4725 − (−0.03328)) + 0.7 × (0.3740 + (−0.002557))</div>
+    <div class="calc-row">L₁₁ = 0.3 × (0.4725 + 0.03328) + 0.7 × (0.3715)</div>
+    <div class="calc-row">L₁₁ = 0.3 × 0.50578 + 0.7 × 0.37144</div>
+    <div class="calc-row">L₁₁ = 0.15173 + 0.26001</div>
+    <div class="calc-row">L₁₁ = <span class="ans">0.4117</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">③ Trend T₁₁</div>
+    <div class="eq">T₁₁ = β × (L₁₁ − L₁₀) + (1 − β) × T₁₀</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">T₁₁ = 0.7 × (0.4117 − 0.3740) + 0.3 × (−0.002557)</div>
+    <div class="calc-row">T₁₁ = 0.7 × 0.0377 + 0.3 × (−0.002557)</div>
+    <div class="calc-row">T₁₁ = 0.02639 + (−0.000767)</div>
+    <div class="calc-row">T₁₁ = <span class="ans">+0.02565</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">④ Seasonal S₁₁</div>
+    <div class="eq">S₁₁ = γ × (Y₁₁ − L₁₁) + (1 − γ) × S₁₀</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">S₁₁ = 0.1 × (0.4725 − 0.4117) + 0.9 × (−0.03328)</div>
+    <div class="calc-row">S₁₁ = 0.1 × 0.0608 + 0.9 × (−0.03328)</div>
+    <div class="calc-row">S₁₁ = 0.00608 + (−0.02995)</div>
+    <div class="calc-row">S₁₁ = <span class="ans">−0.02387</span></div>
+  </div>
+
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">F₁₁</div><div class="rval">0.3382</div></div>
+    <div class="result-pill"><div class="rlabel">L₁₁</div><div class="rval">0.4117</div></div>
+    <div class="result-pill"><div class="rlabel">T₁₁</div><div class="rval">+0.02565</div></div>
+    <div class="result-pill"><div class="rlabel">S₁₁</div><div class="rval">−0.02387</div></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Hasil prediksi Bulan 11 (0.3382) dibandingkan dengan data aktual (0.4725) menunjukkan model cukup konservatif, dengan kenaikan level yang signifikan (0.4117) merespon lonjakan durasi pekerjaan di lapangan.</p>
+</div>
+
+<!-- Bulan 12 -->
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;color:var(--rust);margin-bottom:14px">📅 Perhitungan Bulan 12 — Desember</h3>
+  <p class="prose"><strong>Data dari Bulan 11 (November)</strong> yang akan digunakan:</p>
+  <div class="calc">
+    <div class="calc-row">L₁₁ = <span class="ans">0.4117</span> &nbsp;&nbsp; T₁₁ = <span class="ans">+0.02565</span> &nbsp;&nbsp; S₁₁ = <span class="ans">−0.02387</span></div>
+    <div class="calc-row">Y₁₂ (Data Aktual Desember) = <span class="ans">0.5413</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">① Forecast F₁₂</div>
+    <div class="eq">F₁₂ = L₁₁ + T₁₁ + S₁₁</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">F₁₂ = 0.4117 + 0.02565 + (−0.02387)</div>
+    <div class="calc-row">F₁₂ = 0.4117 + 0.02565 − 0.02387</div>
+    <div class="calc-row">F₁₂ = <span class="ans">0.4135</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">② Level L₁₂</div>
+    <div class="eq">L₁₂ = α × (Y₁₂ − S₁₁) + (1 − α) × (L₁₁ + T₁₁)</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">L₁₂ = 0.3 × (0.5413 − (−0.02387)) + 0.7 × (0.4117 + 0.02565)</div>
+    <div class="calc-row">L₁₂ = 0.3 × (0.5413 + 0.02387) + 0.7 × 0.43735</div>
+    <div class="calc-row">L₁₂ = 0.3 × 0.56517 + 0.7 × 0.43735</div>
+    <div class="calc-row">L₁₂ = 0.16955 + 0.30615</div>
+    <div class="calc-row">L₁₂ = <span class="ans">0.4757</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">③ Trend T₁₂</div>
+    <div class="eq">T₁₂ = β × (L₁₂ − L₁₁) + (1 − β) × T₁₁</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">T₁₂ = 0.7 × (0.4757 − 0.4117) + 0.3 × 0.02565</div>
+    <div class="calc-row">T₁₂ = 0.7 × 0.0640 + 0.3 × 0.02565</div>
+    <div class="calc-row">T₁₂ = 0.04480 + 0.007695</div>
+    <div class="calc-row">T₁₂ = <span class="ans">+0.05250</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">④ Seasonal S₁₂</div>
+    <div class="eq">S₁₂ = γ × (Y₁₂ − L₁₂) + (1 − γ) × S₁₁</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">S₁₂ = 0.1 × (0.5413 − 0.4757) + 0.9 × (−0.02387)</div>
+    <div class="calc-row">S₁₂ = 0.1 × 0.0656 + 0.9 × (−0.02387)</div>
+    <div class="calc-row">S₁₂ = 0.00656 + (−0.02148)</div>
+    <div class="calc-row">S₁₂ = <span class="ans">−0.01492</span></div>
+  </div>
+
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">F₁₂</div><div class="rval">0.4135</div></div>
+    <div class="result-pill"><div class="rlabel">L₁₂</div><div class="rval">0.4757</div></div>
+    <div class="result-pill"><div class="rlabel">T₁₂</div><div class="rval">+0.05250</div></div>
+    <div class="result-pill"><div class="rlabel">S₁₂</div><div class="rval">−0.01492</div></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan Nilai:</strong> Pada Bulan 12, nilai level mencapai puncaknya di 0.4757, menunjukkan tren pengerjaan di akhir tahun 2025 menjadi jauh lebih lama dibandingkan awal tahun, yang diantisipasi model untuk prediksi periode depan.</p>
+</div>
+
+<!-- Bulan 2 (Training) -->
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;color:var(--blue);margin-bottom:14px">📅 Contoh Perhitungan Bulan 2 — Februari (Training)</h3>
+  <p class="prose">Sebagai perbandingan, berikut adalah contoh perhitungan pada <strong>periode training</strong> (Bulan 2 — Februari). Proses perhitungan sama, namun data ini digunakan untuk <em>melatih</em> model.</p>
+
+  <p class="prose"><strong>Data dari Bulan 1 (Januari)</strong> yang akan digunakan:</p>
+  <div class="calc">
+    <div class="calc-row">L₁ = <span class="ans">0.3432</span> &nbsp;&nbsp; T₁ = <span class="ans">+0.00872</span> &nbsp;&nbsp; S₁ = <span class="ans">−0.02952</span></div>
+    <div class="calc-row">Y₂ (Data Aktual Februari) = <span class="ans">0.3595</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">① Forecast F₂ (dihitung dari data bulan 1)</div>
+    <div class="eq">F₂ = L₁ + T₁ + S₁</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">F₂ = 0.3432 + 0.00872 + (−0.02952)</div>
+    <div class="calc-row">F₂ = 0.3432 + 0.00872 − 0.02952</div>
+    <div class="calc-row">F₂ = <span class="ans">0.3224</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">② Level L₂</div>
+    <div class="eq">L₂ = α × (Y₂ − S₁) + (1 − α) × (L₁ + T₁)</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">L₂ = 0.3 × (0.3595 − (−0.02952)) + 0.7 × (0.3432 + 0.00872)</div>
+    <div class="calc-row">L₂ = 0.3 × (0.3595 + 0.02952) + 0.7 × 0.35192</div>
+    <div class="calc-row">L₂ = 0.3 × 0.38902 + 0.7 × 0.35192</div>
+    <div class="calc-row">L₂ = 0.11671 + 0.24634</div>
+    <div class="calc-row">L₂ = <span class="ans">0.3630</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">③ Trend T₂</div>
+    <div class="eq">T₂ = β × (L₂ − L₁) + (1 − β) × T₁</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">T₂ = 0.7 × (0.3630 − 0.3432) + 0.3 × 0.00872</div>
+    <div class="calc-row">T₂ = 0.7 × 0.0198 + 0.3 × 0.00872</div>
+    <div class="calc-row">T₂ = 0.01386 + 0.002616</div>
+    <div class="calc-row">T₂ = <span class="ans">+0.01653</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">④ Seasonal S₂</div>
+    <div class="eq">S₂ = γ × (Y₂ − L₂) + (1 − γ) × S₁</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row">S₂ = 0.1 × (0.3595 − 0.3630) + 0.9 × (−0.02952)</div>
+    <div class="calc-row">S₂ = 0.1 × (−0.0035) + 0.9 × (−0.02952)</div>
+    <div class="calc-row">S₂ = −0.00035 + (−0.02657)</div>
+    <div class="calc-row">S₂ = <span class="ans">−0.02691</span></div>
+  </div>
+
+  <div class="formula">
+    <div class="ftitle">⑤ Error, Absolute Error, dan APE</div>
+    <div class="eq">Error = Y₂ − F₂ &nbsp;|&nbsp; Abs Error = |Error| &nbsp;|&nbsp; APE = (Abs Error ÷ Y₂) × 100%</div>
+  </div>
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Error:</span></div>
+    <div class="calc-row">= 0.3595 − 0.3224 = <span class="ans">+0.03715</span></div>
+    <br>
+    <div class="calc-row"><span class="lbl">Absolute Error:</span></div>
+    <div class="calc-row">= |+0.03715| = <span class="ans">0.03715</span></div>
+    <br>
+    <div class="calc-row"><span class="lbl">APE:</span></div>
+    <div class="calc-row">= (0.03715 ÷ 0.3595) × 100% = <span class="ans">10.33 %</span></div>
+  </div>
+
+  <div class="result-row">
+    <div class="result-pill"><div class="rlabel">F₂</div><div class="rval">0.3224</div></div>
+    <div class="result-pill"><div class="rlabel">L₂</div><div class="rval">0.3630</div></div>
+    <div class="result-pill"><div class="rlabel">T₂</div><div class="rval">+0.01653</div></div>
+    <div class="result-pill"><div class="rlabel">S₂</div><div class="rval">−0.02691</div></div>
+  </div>
+  <div class="result-row">
+    <div class="result-pill" style="background:linear-gradient(135deg,#f39c12,#e67e22)"><div class="rlabel">Error</div><div class="rval">+0.03715</div></div>
+    <div class="result-pill" style="background:linear-gradient(135deg,#f39c12,#e67e22)"><div class="rlabel">Abs Error</div><div class="rval">0.03715</div></div>
+    <div class="result-pill" style="background:linear-gradient(135deg,#f39c12,#e67e22)"><div class="rlabel">APE</div><div class="rval">10.33 %</div></div>
+  </div>
+
+  <div class="note" style="margin-top:20px">
+    <strong>💡 Catatan Perbedaan Training vs Testing:</strong><br>
+    • <strong>Bulan 2 (Training):</strong> Data digunakan untuk melatih model. APE = 10.33% ikut dihitung dalam MAPE keseluruhan.<br>
+    • <strong>Bulan 11 & 12 (Testing):</strong> Data untuk mengukur kemampuan prediksi model pada data baru. APE juga dihitung dalam MAPE untuk evaluasi akhir.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 6 — TABEL LENGKAP FORECASTING
+════════════════════════════════════════ -->
+<div id="tabel-lengkap"></div>
+<hr class="divider">
+<div class="sec-num blue">6</div>
+<h2 class="sec-title">Hasil Forecasting Lengkap</h2>
+
+<blockquote>Setelah dilakukan perhitungan menggunakan metode Holt-Winters, maka diperoleh hasil forecasting secara keseluruhan dari Bulan 1 hingga Bulan 12 yang disajikan pada tabel berikut:</blockquote>
+
+<div class="card" style="padding:20px">
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Bulan</th><th>Nama</th><th>Data Aktual (Yₜ)</th><th>Level (Lₜ)</th><th>Trend (Tₜ)</th><th>Musiman (Sₜ)</th><th>Forecast (Fₜ)</th></tr>
+      </thead>
+      <tbody>
+        <tr class="init"><td>1</td><td class="name">Januari</td><td>0.3224</td><td>0.3432</td><td>+0.00872</td><td>−0.02952</td><td>0.3224</td></tr>
+        <tr><td>2</td><td class="name">Februari</td><td>0.3595</td><td>0.3630</td><td>+0.01653</td><td>−0.02691</td><td>0.3224</td></tr>
+        <tr><td>3</td><td class="name">Maret</td><td>0.4070</td><td>0.3959</td><td>+0.02795</td><td>−0.02311</td><td>0.3527</td></tr>
+        <tr><td>4</td><td class="name">April</td><td>0.3003</td><td>0.3937</td><td>+0.00685</td><td>−0.03014</td><td>0.4007</td></tr>
+        <tr><td>5</td><td class="name">Mei</td><td>0.2731</td><td>0.3713</td><td>−0.01359</td><td>−0.03695</td><td>0.3704</td></tr>
+        <tr><td>6</td><td class="name">Juni</td><td>0.3968</td><td>0.3805</td><td>+0.00236</td><td>−0.03164</td><td>0.3208</td></tr>
+        <tr class="empty"><td>7</td><td class="name">Juli</td><td>—</td><td>0.3805</td><td>+0.00236</td><td>−0.03164</td><td>0.3513</td></tr>
+        <tr><td>8</td><td class="name">Agustus</td><td>0.3682</td><td>0.3880</td><td>+0.00592</td><td>−0.03045</td><td>0.3513</td></tr>
+        <tr><td>9</td><td class="name">September</td><td>0.2981</td><td>0.3743</td><td>−0.00780</td><td>−0.03502</td><td>0.3635</td></tr>
+        <tr><td>10</td><td class="name">Oktober</td><td>0.3565</td><td>0.3740</td><td>−0.00256</td><td>−0.03328</td><td>0.3315</td></tr>
+        <tr class="test"><td>11</td><td class="name">November</td><td>0.4725</td><td>0.4117</td><td>+0.02565</td><td>−0.02387</td><td>0.3382</td></tr>
+        <tr class="test"><td>12</td><td class="name">Desember</td><td>0.5413</td><td>0.4757</td><td>+0.05250</td><td>−0.01492</td><td>0.4135</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:.84rem">
+    <span><span class="badge badge-init">■</span> Inisialisasi</span>
+    <span style="color:var(--rust)"><span class="badge badge-empty">■</span> Tidak ada data</span>
+    <span><span class="badge badge-test">■</span> Testing</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 7 — EVALUASI AKURASI
+════════════════════════════════════════ -->
+<div id="evaluasi"></div>
+<hr class="divider">
+<div class="sec-num rust">7</div>
+<h2 class="sec-title">4.3.2 Evaluasi Akurasi Model Peramalan</h2>
+<p class="sec-desc">Setelah diperoleh hasil peramalan menggunakan metode Holt-Winters, selanjutnya dilakukan evaluasi untuk mengetahui tingkat akurasi model. Pengukuran akurasi dilakukan menggunakan <strong>Error, Absolute Error, APE</strong>, dan <strong>MAPE</strong> pada periode testing.</p>
+
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:14px">Rumus Perhitungan Error</h3>
+  <div class="formula">
+    <div class="ftitle">Error</div>
+    <div class="eq">Error = Yₜ − Fₜ</div>
+  </div>
+  <div class="formula">
+    <div class="ftitle">Absolute Error</div>
+    <div class="eq">Absolute Error = |Error| = |Yₜ − Fₜ|</div>
+  </div>
+  <div class="formula">
+    <div class="ftitle">APE (Absolute Percentage Error)</div>
+    <div class="eq">APE = (|Yₜ − Fₜ| ÷ Yₜ) × 100%</div>
+  </div>
+  <div class="formula">
+    <div class="ftitle">MAPE (Mean Absolute Percentage Error)</div>
+    <div class="eq">MAPE = (Σ APE) ÷ Jumlah Periode Testing</div>
+  </div>
+</div>
+
+
+<!-- Tabel Testing 20% khusus (Data Mentah) -->
+<div class="card" style="padding:20px">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:18px;text-align:center">🔍 Tabulasi Data Testing (20% set — Data Mentah)</h3>
+  <p style="text-align:center;color:var(--ink3);font-size:.92rem;margin-bottom:20px">Tabel di bawah ini menyajikan 16 data terakhir (No. 66–81) dari total dataset yang secara khusus dipisahkan sebagai data uji (Testing). Data ini berfungsi sebagai pembanding utama untuk menguji keandalan hasil prediksi model yang telah dilatih menggunakan data training sebelumnya.</p>
+  
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>No</th><th>Tanggal</th><th>Durasi (Jam)</th><th>Keterangan</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>66</td><td class="name">10/13/2025</td><td>0.6039</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>67</td><td class="name">10/16/2025</td><td>0.2564</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>68</td><td class="name">10/19/2025</td><td>0.2092</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>69</td><td class="name">10/19/2025</td><td>0.6331</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>70</td><td class="name">10/22/2025</td><td>0.2244</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>71</td><td class="name">10/22/2025</td><td>0.3714</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>72</td><td class="name">10/25/2025</td><td>0.3475</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>73</td><td class="name">11/12/2025</td><td>0.5303</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>74</td><td class="name">11/12/2025</td><td>0.4147</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>75</td><td class="name">12/12/2025</td><td>0.4097</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>76</td><td class="name">12/18/2025</td><td>0.4969</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>77</td><td class="name">12/18/2025</td><td>0.3244</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>78</td><td class="name">12/21/2025</td><td>0.8808</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>79</td><td class="name">12/21/2025</td><td>0.2986</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>80</td><td class="name">12/21/2025</td><td>0.8208</td><td><span class="badge badge-test">Testing</span></td></tr>
+        <tr><td>81</td><td class="name">12/27/2025</td><td>0.5581</td><td><span class="badge badge-test">Testing</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Tabel Hasil Perhitungan Data Testing (Summarized) -->
+<div class="card" style="padding:20px">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:18px;text-align:center">📊 Tabel Hasil Perhitungan Data Testing (Summarized)</h3>
+  <p style="text-align:center;color:var(--ink3);font-size:.92rem;margin-bottom:20px">Tabel ini menyajikan ringkasan variabel model yang dihitung khusus untuk periode testing. Perlu diperhatikan bahwa Bulan 10 (Oktober) turut dimasukkan ke dalam kelompok ini dikarenakan mayoritas data pada periode tersebut, yakni dari No. 66 hingga 72, termasuk dalam porsi 20% data uji.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Bulan</th><th>Nama</th><th>Data Aktual (Yₜ)</th><th>Level (Lₜ)</th><th>Trend (Tₜ)</th><th>Musiman (Sₜ)</th><th>Forecast (Fₜ)</th></tr>
+      </thead>
+      <tbody>
+        <tr class="test"><td>10</td><td class="name">Oktober</td><td>0.3565</td><td>0.3740</td><td>−0.00256</td><td>−0.03328</td><td>0.3315</td></tr>
+        <tr class="test"><td>11</td><td class="name">November</td><td>0.4725</td><td>0.4117</td><td>+0.02565</td><td>−0.02387</td><td>0.3382</td></tr>
+        <tr class="test"><td>12</td><td class="name">Desember</td><td>0.5413</td><td>0.4757</td><td>+0.05250</td><td>−0.01492</td><td>0.4135</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Contoh Langkah Perhitungan Testing -->
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:16px">📐 Langkah Perhitungan Variabel (Bulan 10)</h3>
+  <p class="prose">Sebelum melihat hasil akhir, berikut adalah cara mendapatkan nilai-nilai pada tabel di atas menggunakan rumus Holt-Winters. Kita ambil contoh pada <strong>Bulan 10 (Oktober)</strong>:</p>
+
+  <div class="note-info">
+    <strong>1. Menghitung Data Aktual (Y₁₀):</strong><br>
+    Y₁₀ adalah rata-rata durasi dari data No. 65 sampai 72.<br>
+    Y₁₀ = (0.2058 + 0.6039 + 0.2564 + ... + 0.3475) ÷ 8 = <strong>0.3565</strong>
+  </div>
+
+  <div class="note-info">
+    <strong>2. Menghitung Forecast (F₁₀):</strong><br>
+    F₁₀ = L₉ + T₉ + S₉ = 0.3534 + (−0.00397) + (−0.0179) = <strong>0.3315</strong>
+  </div>
+
+  <div class="note-info">
+    <strong>3. Menghitung Level (L₁₀):</strong><br>
+    L₁₀ = α(Y₁₀ − S₉) + (1−α)(L₉ + T₉) = 0.3(0.3565 − (−0.0179)) + 0.7(0.3534 − 0.00397) = <strong>0.3740</strong>
+  </div>
+
+  <div class="note-info">
+    <strong>4. Menghitung Trend (T₁₀):</strong><br>
+    T₁₀ = β(L₁₀ − L₉) + (1−β)T₉ = 0.7(0.3740 − 0.3534) + 0.3(−0.00397) = <strong>−0.00256</strong>
+  </div>
+
+  <div class="note-info">
+    <strong>5. Menghitung Musiman (S₁₀):</strong><br>
+    S₁₀ = γ(Y₁₀ − L₁₀) + (1−γ)S₉ = 0.1(0.3565 − 0.3740) + 0.9(−0.0179) = <strong>−0.03328</strong>
+  </div>
+</div>
+
+<!-- Contoh Perhitungan Testing -->
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:14px">Contoh Perhitungan pada Periode Testing</h3>
+  <p class="prose">Setelah mendapatkan nilai variabel (Y, L, T, S, F) di atas, kita dapat menghitung tingkat kesalahan (Error) pada periode testing yaitu <strong>Bulan 10, 11, dan 12</strong> untuk mengukur akurasi model.</p>
+
+  <p class="prose"><strong>Bulan 10 — Oktober</strong></p>
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Error:</span></div>
+    <div class="calc-row">= Y₁₀ − F₁₀ = 0.3565 − 0.3315 = <span class="ans">+0.0250</span></div>
+    <div class="calc-row"><span class="lbl">Absolute Error:</span></div>
+    <div class="calc-row">= |+0.0250| = <span class="ans">0.0250</span></div>
+    <div class="calc-row"><span class="lbl">APE:</span></div>
+    <div class="calc-row">= (0.0250 ÷ 0.3565) × 100% = <span class="ans">7.01 %</span></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan:</strong> Nilai APE 7.01% ini menunjukkan bahwa model memiliki tingkat akurasi yang sangat tinggi pada bulan Oktober, dengan penyimpangan prediksi hanya sebesar 7.01% dari data aktual di lapangan.</p>
+
+  <p class="prose"><strong>Bulan 11 — November</strong></p>
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Error:</span></div>
+    <div class="calc-row">= Y₁₁ − F₁₁ = 0.4725 − 0.3382 = <span class="ans">+0.1343</span></div>
+    <div class="calc-row"><span class="lbl">Absolute Error:</span></div>
+    <div class="calc-row">= |+0.1343| = <span class="ans">0.1343</span></div>
+    <div class="calc-row"><span class="lbl">APE:</span></div>
+    <div class="calc-row">= (0.1343 ÷ 0.4725) × 100% = <span class="ans">28.43 %</span></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan:</strong> Nilai APE 28.43% ini menunjukkan adanya deviasi yang cukup besar pada November, di mana prediksi model meleset karena adanya lonjakan durasi pengerjaan yang cukup signifikan secara mendadak.</p>
+
+  <p class="prose" style="margin-top:20px"><strong>Bulan 12 — Desember</strong></p>
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Error:</span></div>
+    <div class="calc-row">= Y₁₂ − F₁₂ = 0.5413 − 0.4135 = <span class="ans">+0.1278</span></div>
+    <div class="calc-row"><span class="lbl">Absolute Error:</span></div>
+    <div class="calc-row">= |+0.1278| = <span class="ans">0.1278</span></div>
+    <div class="calc-row"><span class="lbl">APE:</span></div>
+    <div class="calc-row">= (0.1278 ÷ 0.5413) × 100% = <span class="ans">23.61 %</span></div>
+  </div>
+  <p class="note-info"><strong>💡 Penjelasan:</strong> Nilai APE 23.61% ini menunjukkan bahwa meskipun terdapat kesalahan, model masih mampu mengikuti pola kenaikan durasi pengerjaan pada akhir tahun dengan tingkat akurasi yang tetap terjaga.</p>
+</div>
+
+<!-- Perhitungan MAPE Step by Step -->
+<div class="card">
+  <h3 style="font-family:'Playfair Display',serif;margin-bottom:6px">📐 Cara Menghitung MAPE</h3>
+  <p class="prose">MAPE dihitung dari <strong>rata-rata seluruh nilai APE</strong> pada periode yang memiliki data. Bulan 1 tidak dihitung (inisialisasi, tidak ada error) dan Bulan 7 tidak dihitung (tidak ada data).</p>
+
+  <div class="formula">
+    <div class="ftitle">Rumus MAPE</div>
+    <div class="eq">MAPE = ( Σ APE ) ÷ Jumlah Periode yang Dihitung</div>
+    <div class="eq" style="font-size:.85rem;opacity:.6;">// Σ APE = Jumlah semua nilai APE dari setiap bulan</div>
+  </div>
+
+  <p class="prose"><strong>Langkah 1 — Kumpulkan semua nilai APE dari tabel di atas:</strong></p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Bulan</th><th>Nama</th><th>APE (%)</th><th>Kumulatif</th></tr></thead>
+      <tbody>
+        <tr class="init"><td>1</td><td class="name">Januari</td><td style="color:var(--rust);font-style:italic">— (Inisialisasi)</td><td style="color:var(--rust);font-style:italic">tidak dihitung</td></tr>
+        <tr><td>2</td><td class="name">Februari</td><td>10.33</td><td>10.33</td></tr>
+        <tr><td>3</td><td class="name">Maret</td><td>13.36</td><td>23.69</td></tr>
+        <tr><td>4</td><td class="name">April</td><td>33.45</td><td>57.14</td></tr>
+        <tr><td>5</td><td class="name">Mei</td><td>35.65</td><td>92.79</td></tr>
+        <tr><td>6</td><td class="name">Juni</td><td>19.15</td><td>111.94</td></tr>
+        <tr class="empty"><td>7</td><td class="name">Juli</td><td style="color:var(--rust);font-style:italic">— (Kosong)</td><td style="color:var(--rust);font-style:italic">tidak dihitung</td></tr>
+        <tr><td>8</td><td class="name">Agustus</td><td>4.60</td><td>116.54</td></tr>
+        <tr><td>9</td><td class="name">September</td><td>21.92</td><td>138.46</td></tr>
+        <tr><td>10</td><td class="name">Oktober</td><td>7.01</td><td>145.47</td></tr>
+        <tr class="test"><td>11</td><td class="name">November</td><td>28.43</td><td>173.90</td></tr>
+        <tr class="test"><td>12</td><td class="name">Desember</td><td>23.61</td><td style="font-weight:700;color:var(--teal)">197.52</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose" style="margin-top:22px"><strong>Langkah 2 — Jumlahkan semua APE (Σ APE):</strong></p>
+  <div class="calc">
+    <div class="calc-row">Σ APE = 10.33 + 13.36 + 33.45 + 35.65 + 19.15 + 4.60 + 21.92 + 7.01 + 28.43 + 23.61</div>
+    <div class="calc-row">Σ APE = <span class="ans">197.52 %</span></div>
+  </div>
+
+  <p class="prose" style="margin-top:18px"><strong>Langkah 3 — Hitung jumlah periode yang dihitung:</strong></p>
+  <div class="calc">
+    <div class="calc-row">Periode dihitung = Bulan 2, 3, 4, 5, 6, 8, 9, 10, 11, 12</div>
+    <div class="calc-row">Jumlah periode = <span class="ans">10</span></div>
+    <div class="calc-row"><span class="sub">(Bulan 1 = inisialisasi, Bulan 7 = tidak ada data → kedua tidak dihitung)</span></div>
+  </div>
+
+  <p class="prose" style="margin-top:18px"><strong>Langkah 4 — Bagi total APE dengan jumlah periode:</strong></p>
+  <div class="calc">
+    <div class="calc-row">MAPE = Σ APE ÷ Jumlah Periode</div>
+    <div class="calc-row">MAPE = 197.52 ÷ 10</div>
+    <div class="calc-row">MAPE = <span class="ans">19.75 %</span></div>
+  </div>
+</div>
+
+<!-- MAPE Banner -->
+<div class="mape-banner">
+  <div class="mlabel">MAPE — Mean Absolute Percentage Error</div>
+  <div class="mval">19.75 %</div>
+  <div class="mdesc">MAPE = 197.52% ÷ 10 periode = <strong>19.75%</strong>. Nilai MAPE di bawah 20% dikategorikan sebagai akurasi yang <strong>baik</strong>, artinya model Holt-Winters mampu memprediksi durasi perbaikan meteran dengan tingkat kesalahan rata-rata hanya 19.75%.</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     BAGIAN 8 — PREDIKSI PERIODE BERIKUTNYA
+════════════════════════════════════════ -->
+<div id="prediksi"></div>
+<hr class="divider">
+<div class="sec-num blue">8</div>
+<h2 class="sec-title">Prediksi Durasi Kegiatan Periode Berikutnya</h2>
+<p class="sec-desc">Setelah diperoleh tingkat akurasi model menggunakan Mean Absolute Percentage Error (MAPE), langkah selanjutnya adalah melakukan peramalan untuk mengetahui estimasi durasi kegiatan pada periode berikutnya. Peramalan ini bertujuan untuk memberikan gambaran waktu pengerjaan yang dapat digunakan sebagai acuan dalam perencanaan shift kerja.</p>
+
+<div class="card">
+  <p class="prose">Perhitungan forecast dilakukan menggunakan komponen terakhir pada periode ke-12, yaitu <strong>Level (L₁₂)</strong>, <strong>Trend (T₁₂)</strong>, dan <strong>Seasonal (S₁₂)</strong>. Karena model yang digunakan adalah Triple Exponential Smoothing Additive (Holt-Winters), maka rumus peramalan satu periode ke depan adalah:</p>
+
+  <div class="formula">
+    <div class="ftitle">Rumus Forecast Periode Berikutnya (Bulan 13)</div>
+    <div class="eq">F₁₃ = L₁₂ + T₁₂ + S₁₂</div>
+  </div>
+
+  <p class="prose"><strong>Komponen terakhir dari Bulan 12 (Desember):</strong></p>
+  <div class="calc">
+    <div class="calc-row">L₁₂ = <span class="ans">0.4757</span> &nbsp; (Level terakhir)</div>
+    <div class="calc-row">T₁₂ = <span class="ans">+0.05250</span> &nbsp; (Trend terakhir)</div>
+    <div class="calc-row">S₁₂ = <span class="ans">−0.01492</span> &nbsp; (Seasonal terakhir)</div>
+  </div>
+
+  <div class="calc">
+    <div class="calc-row"><span class="lbl">Perhitungan:</span></div>
+    <div class="calc-row">F₁₃ = 0.4757 + 0.05250 + (−0.01492)</div>
+    <div class="calc-row">F₁₃ = 0.4757 + 0.05250 − 0.01492</div>
+    <div class="calc-row">F₁₃ = <span class="ans">0.5133 jam</span></div>
+  </div>
+
+  <div class="forecast-next">
+    <h3>📊 Hasil Prediksi Periode Berikutnya</h3>
+    <div class="frow">
+      <div class="fpill"><div class="fl">Periode</div><div class="fv">Bulan 13</div></div>
+      <div class="fpill"><div class="fl">Forecast</div><div class="fv">0.5133 jam</div></div>
+      <div class="fpill"><div class="fl">Dalam Menit</div><div class="fv">30.80 menit</div></div>
+      <div class="fpill" style="background:rgba(255,215,0,.18);"><div class="fl">Akurasi Model (MAPE)</div><div class="fv">19.75 %</div></div>
+    </div>
+    <div class="feq">
+      F₁₃ = L₁₂ + T₁₂ + S₁₂<br>
+      F₁₃ = 0.4757 + 0.05250 + (−0.01492)<br>
+      F₁₃ = <strong>0.5133 jam ≈ 30.80 menit</strong><br><br>
+      Akurasi Model (MAPE) = <strong>19.75 %</strong> → Kategori <strong>Baik</strong>
+    </div>
+    <p style="margin-top:16px;opacity:.85;font-size:.93rem;">Estimasi durasi perbaikan meteran pada periode berikutnya adalah sekitar <strong>30.80 menit</strong> dengan tingkat akurasi model <strong>MAPE = 19.75%</strong> (kategori baik). Hasil ini dapat digunakan sebagai acuan dalam perencanaan alokasi waktu dan shift kerja.</p>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<footer>
+  <p><strong>d. Contoh Perhitungan — Triple Exponential Smoothing (Holt-Winters Additive)</strong></p>
+  <p>Perbaikan Meteran — Kelompok 1 &nbsp;|&nbsp; Periode Januari – Desember 2025</p>
+  <p style="margin-top:6px;opacity:.6">Seluruh nilai diperoleh dari perhitungan Excel: <em>Tutorial Holt Winters Perbaikan Meteran UPDATED</em></p>
+</footer>
+
+</body>
+</html>
